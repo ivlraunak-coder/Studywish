@@ -3428,199 +3428,100 @@ init();
 })();
 
 // ══════════════════════════════════════════════════════════
-//  AI FEATURES — Gemini-powered Chat, Insights, Flashcards, Quiz
+//  AI FEATURES — Secure backend-powered (Vercel /api/ai)
+//  No API key in the browser. All calls go to your backend.
+//  Model: gemini-1.5-flash (much higher free quota than 2.0-flash)
 // ══════════════════════════════════════════════════════════
 
-// ── GEMINI API HELPER ──
-const GEMINI_MODEL = 'gemini-2.0-flash';
+// ── BACKEND URL ──
+// If your index.html is on the SAME Vercel project as api/ai.js → leave as ''
+// If hosted elsewhere → set to 'https://your-project.vercel.app'
+const AI_BACKEND_URL = window.SD_BACKEND_URL || '';
 
-function getGeminiKey() {
-  return localStorage.getItem('sd_gemini_key') || '';
+// ── User ID for per-user rate limiting ──
+function getUserId() {
+  let uid = localStorage.getItem('sd_uid');
+  if (!uid) {
+    uid = 'u_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+    localStorage.setItem('sd_uid', uid);
+  }
+  return uid;
 }
 
-// Robustly extract JSON from Gemini response (handles markdown code blocks)
+// ── Robustly extract JSON from AI response (handles markdown fences) ──
 function extractJson(raw) {
   if (!raw) throw new Error('Empty response');
-  // Strip markdown code fences
-  let clean = raw.trim();
-  clean = clean.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
-  // Try direct parse
+  let clean = raw.trim()
+    .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
   try { return JSON.parse(clean); } catch(e) {}
-  // Try finding first [ or { and matching bracket
   const arrStart = clean.indexOf('[');
   const objStart = clean.indexOf('{');
   const start = (arrStart === -1) ? objStart : (objStart === -1) ? arrStart : Math.min(arrStart, objStart);
   if (start !== -1) {
     const isArr = clean[start] === '[';
-    const open = isArr ? '[' : '{';
-    const close = isArr ? ']' : '}';
+    const open = isArr ? '[' : '{'; const close = isArr ? ']' : '}';
     let depth = 0, end = -1;
     for (let i = start; i < clean.length; i++) {
       if (clean[i] === open) depth++;
       else if (clean[i] === close) { depth--; if (depth === 0) { end = i; break; } }
     }
-    if (end !== -1) {
-      try { return JSON.parse(clean.slice(start, end + 1)); } catch(e) {}
-    }
+    if (end !== -1) try { return JSON.parse(clean.slice(start, end + 1)); } catch(e) {}
   }
-  throw new Error('Could not parse JSON from response');
+  throw new Error('Could not parse JSON from AI response');
 }
 
-async function geminiPost(url, body) {
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!resp.ok) {
-    let errMsg = resp.statusText;
-    try { const e = await resp.json(); errMsg = e?.error?.message || errMsg; } catch(e) {}
-    if (resp.status === 401 || resp.status === 403 ||
-        (resp.status === 400 && errMsg.toLowerCase().includes('api key'))) {
-      showToast('❌ API key rejected. Click AI: tab to update it.');
-      openApiKeyModal();
-      throw new Error('invalid_key');
+// ── Core fetch to your Vercel backend ──
+async function apiFetch(action, payload, retries = 2) {
+  const url = `${AI_BACKEND_URL}/api/ai`;
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
+    let resp;
+    try {
+      resp = await fetch(url, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-User-ID': getUserId() },
+        body:    JSON.stringify({ action, ...payload }),
+      });
+    } catch { lastErr = new Error('Network error — check your connection.'); continue; }
+    let data;
+    try { data = await resp.json(); } catch { data = {}; }
+    if (resp.ok) return data;
+    if (resp.status === 429) {
+      const wait = data.retryAfter || 60;
+      showToast(`⏳ AI rate limit — wait ${wait}s before trying again.`);
+      throw new Error('rate_limit');
     }
-    throw new Error(errMsg);
+    if (resp.status >= 500) { lastErr = new Error(data.message || 'AI service temporarily unavailable.'); continue; }
+    throw new Error(data.message || `Request failed (${resp.status})`);
   }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text && data.candidates?.[0]?.finishReason === 'SAFETY') throw new Error('Blocked by safety filter');
-  if (!text) throw new Error('No response from Gemini');
-  return text;
+  throw lastErr || new Error('AI request failed. Please try again.');
 }
 
-async function callGemini(systemPrompt, userPrompt, jsonMode = false) {
-  const key = getGeminiKey();
-  if (!key) { openApiKeyModal(); throw new Error('No API key set'); }
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
-  // NOTE: Do NOT use responseMimeType:'application/json' — it causes 400 errors on some keys/regions
-  // Instead we parse JSON manually from text response
-  const body = {
-    system_instruction: { parts: [{ text: systemPrompt }] },
-    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 1500 }
-  };
-  return await geminiPost(url, body);
+// ── Drop-in replacements for callGemini / callGeminiChat ──
+async function callGemini(systemPrompt, userPrompt) {
+  const data = await apiFetch('chat', { message: userPrompt, systemInstruction: systemPrompt });
+  return data.text;
 }
-
 async function callGeminiChat(systemPrompt, history) {
-  const key = getGeminiKey();
-  if (!key) { openApiKeyModal(); throw new Error('No API key'); }
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
-  const contents = history.map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }]
-  }));
-  const body = {
-    system_instruction: { parts: [{ text: systemPrompt }] },
-    contents,
-    generationConfig: { temperature: 0.8, maxOutputTokens: 1500 }
-  };
-  return await geminiPost(url, body);
+  const lastMsg = history[history.length - 1]?.content || '';
+  const data = await apiFetch('chat', { message: lastMsg, systemInstruction: systemPrompt });
+  return data.text;
 }
 
-// ── API KEY MODAL ──
-function openApiKeyModal() {
-  const existing = document.getElementById('apiKeyModal');
-  if (existing) { existing.classList.remove('hidden'); return; }
-  const html = `<div class="modal-backdrop" id="apiKeyModal">
-    <div class="modal" style="max-width:480px">
-      <div class="modal-brand"><span>🔑</span> AI Setup</div>
-      <h2>Connect Free AI</h2>
-      <p class="modal-sub">StudyDrop uses Google Gemini AI — it's <strong>100% free</strong> (1,500 requests/day). You need a free API key to enable AI features.</p>
-      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:16px;margin-bottom:18px;font-size:.82rem;line-height:1.7;color:var(--text2)">
-        <div style="font-weight:800;color:var(--text);margin-bottom:8px">📋 How to get your free key:</div>
-        <div>1. Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--pink);font-weight:700">aistudio.google.com/app/apikey</a></div>
-        <div>2. Sign in with any Google account</div>
-        <div>3. Click <strong>"Create API Key"</strong></div>
-        <div>4. Copy and paste it below ↓</div>
-      </div>
-      <div class="fl"><label>Your Gemini API Key</label><input class="fi" id="geminiKeyInput" type="password" placeholder="AIzaSy..." value="${getGeminiKey()}"></div>
-      <div style="display:flex;gap:8px;margin-top:4px">
-        <button class="btn btn-primary" onclick="saveApiKey()" style="flex:1;justify-content:center;border-radius:14px">✓ Save & Activate AI</button>
-        <button class="btn btn-ghost" onclick="closeApiKeyModal()">Cancel</button>
-      </div>
-      <button onclick="saveApiKeyDirect()" style="width:100%;margin-top:8px;background:none;border:1.5px dashed var(--border);border-radius:14px;padding:10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--pink)';this.style.color='var(--pink)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Skip verification — just save the key →</button>
-      <div id="apiKeyStatus" style="margin-top:12px;font-size:.78rem;text-align:center;color:var(--muted)"></div>
-    </div>
-  </div>`;
-  document.body.insertAdjacentHTML('beforeend', html);
-}
+// ── No-op stubs — no key modal needed anymore ──
+function openApiKeyModal()  { showToast('✅ AI is powered by the backend — no key needed!'); }
+function closeApiKeyModal() {}
+function saveApiKey()       {}
+function saveApiKeyDirect() {}
+function getGeminiKey()     { return 'backend'; } // keeps old guards from throwing
 
-function closeApiKeyModal() {
-  const el = document.getElementById('apiKeyModal');
-  if (el) el.classList.add('hidden');
-}
-
-async function saveApiKey() {
-  const key = document.getElementById('geminiKeyInput').value.trim();
-  if (!key) { showToast('Paste your API key first!'); return; }
-  if (!key.startsWith('AIza') || key.length < 30) {
-    document.getElementById('apiKeyStatus').innerHTML = '<span style="color:#dc3545">❌ That doesn\'t look like a valid Gemini key. It should start with AIza…</span>';
-    return;
-  }
-  const status = document.getElementById('apiKeyStatus');
-  status.textContent = '🔄 Verifying key…';
-  try {
-    const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
-    const testResp = await fetch(testUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
-        generationConfig: { maxOutputTokens: 3 }
-      })
-    });
-    const testData = await testResp.json();
-    // 400 with "API_KEY_INVALID" = bad key. 200 or 429 (quota) = key is valid
-    if (!testResp.ok && testResp.status !== 429) {
-      const errMsg = testData?.error?.message || '';
-      if (errMsg.toLowerCase().includes('api key') || errMsg.toLowerCase().includes('invalid')) {
-        status.innerHTML = '<span style="color:#dc3545">❌ Invalid key — double-check and try again.</span>';
-        return;
-      }
-    }
-    // Key is good (200 ok, or quota hit which still means key is real)
-    localStorage.setItem('sd_gemini_key', key);
-    status.innerHTML = '<span style="color:var(--sage)">✅ Key saved! All AI features are now active.</span>';
-    setTimeout(() => {
-      closeApiKeyModal();
-      const tab = document.getElementById('aiKeyTab');
-      if(tab){ tab.innerHTML = '🤖 AI: <span style="color:var(--sage)">✓</span>'; tab.title = 'AI active — click to change key'; }
-    }, 1400);
-    showToast('🤖 AI activated! All features are live.');
-  } catch(e) {
-    // CORS or network error — key format checked above so just save it
-    localStorage.setItem('sd_gemini_key', key);
-    status.innerHTML = '<span style="color:var(--sage)">✅ Key saved! (Verification blocked by browser — this is normal). Your AI features should work.</span>';
-    setTimeout(() => {
-      closeApiKeyModal();
-      const tab = document.getElementById('aiKeyTab');
-      if(tab){ tab.innerHTML = '🤖 AI: <span style="color:var(--sage)">✓</span>'; tab.title = 'AI active — click to change key'; }
-    }, 2200);
-  }
-}
-
-// Direct save — no verification, just store and go
-function saveApiKeyDirect() {
-  const key = document.getElementById('geminiKeyInput').value.trim();
-  if (!key) { showToast('Paste your API key first!'); return; }
-  if (!key.startsWith('AIza') || key.length < 30) {
-    document.getElementById('apiKeyStatus').innerHTML = '<span style="color:#dc3545">❌ Key should start with AIza and be longer. Double-check it.</span>';
-    return;
-  }
-  localStorage.setItem('sd_gemini_key', key);
-  closeApiKeyModal();
-  const tab = document.getElementById('aiKeyTab');
-  if(tab){ tab.innerHTML = '🤖 AI: <span style="color:var(--sage)">✓</span>'; tab.title = 'AI active — click to change key'; }
-  showToast('🤖 AI key saved! Try sending a message to test it.');
-}
-
-window.openApiKeyModal = openApiKeyModal;
+window.openApiKeyModal  = openApiKeyModal;
 window.closeApiKeyModal = closeApiKeyModal;
-window.saveApiKey = saveApiKey;
+window.saveApiKey       = saveApiKey;
 window.saveApiKeyDirect = saveApiKeyDirect;
+window.callGemini       = callGemini;
+window.callGeminiChat   = callGeminiChat;
 
 // ── AI CHAT ──
 let aiChatHistory = [];
@@ -4509,30 +4410,30 @@ window.switchTab = function(id, btn) {
 // Hook into existing updateXpBar / updateCoinDisplay globals
 const _origUpdateXp = window.updateXpBar;
 function syncSidebarStats() {
-  // XP fill + level
-  const xpFill  = document.getElementById('headerXpBar');
-  const lvlText = document.getElementById('headerLevelText');
-  if (xpFill)  document.getElementById('sbXpFill').style.width  = xpFill.style.width;
-  if (lvlText) document.getElementById('sbLvlText').textContent = lvlText.textContent;
+  // XP + level — read from JS variables, not hidden DOM elements
+  if (typeof xp !== 'undefined' && typeof getLevelInfo === 'function') {
+    const lvlInfo = getLevelInfo(xp);
+    document.getElementById('sbXp').textContent     = xp;
+    document.getElementById('sbLvlText').textContent = 'LVL ' + lvlInfo.level;
+    document.getElementById('sbLevel').textContent   = 'Level ' + lvlInfo.level + ' · ' + lvlInfo.title;
+    // Sync XP bar width from hidden element (updated by updateXpBar)
+    const xpFill = document.getElementById('headerXpBar');
+    if (xpFill) document.getElementById('sbXpFill').style.width = xpFill.style.width;
+  }
 
-  // Coins
-  const coinEl = document.getElementById('coinDisplay');
-  if (coinEl)  document.getElementById('sbCoins').textContent   = coinEl.textContent;
+  // Coins — JS variable
+  if (typeof mushroomCoins !== 'undefined') document.getElementById('sbCoins').textContent = mushroomCoins;
 
-  // XP number
-  if (typeof xp !== 'undefined') document.getElementById('sbXp').textContent = xp;
-
-  // Streak
+  // Streak — JS variable (not the DOM element which has the same name!)
   if (typeof pomoStreak !== 'undefined') document.getElementById('sbStreak').textContent = pomoStreak;
 
   // User info
   const nameEl = document.getElementById('chipName');
   if (nameEl) {
-    document.getElementById('sbName').textContent = nameEl.textContent;
-    document.getElementById('sbInitial').textContent = (nameEl.textContent || '?')[0].toUpperCase();
+    const name = nameEl.textContent || 'You';
+    document.getElementById('sbName').textContent    = name;
+    document.getElementById('sbInitial').textContent = name[0].toUpperCase();
   }
-  const lvlInfo = typeof getLevelInfo === 'function' && typeof xp !== 'undefined' ? getLevelInfo(xp) : null;
-  if (lvlInfo) document.getElementById('sbLevel').textContent = `Level ${lvlInfo.level} · ${lvlInfo.title}`;
 
   // Room name + online count
   const roomNameEl   = document.getElementById('headerRoomName');
@@ -4543,9 +4444,9 @@ function syncSidebarStats() {
   // Avatar
   const chipAv = document.getElementById('chipAv');
   if (chipAv) {
-    const img = chipAv.querySelector('img');
+    const img  = chipAv.querySelector('img');
     const sbAv = document.getElementById('sbAv');
-    if (img && img.src) sbAv.innerHTML = `<img src="${img.src}" style="width:100%;height:100%;object-fit:cover">`;
+    if (img && img.src) sbAv.innerHTML = `<img src="${img.src}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
     else sbAv.innerHTML = `<span>${(document.getElementById('chipInitial')?.textContent || '?')}</span>`;
   }
 }
