@@ -920,13 +920,13 @@ header{display:none!important}
 .sd-page-area::-webkit-scrollbar{width:5px}
 .sd-page-area::-webkit-scrollbar-thumb{background:var(--border2);border-radius:5px}
 .sd-sidebar-overlay{display:none;position:fixed;inset:0;z-index:49;background:rgba(0,0,0,.35);backdrop-filter:blur(4px)}
+.sd-sidebar-overlay.active{display:block}
 @media(max-width:768px){
   .sd-sidebar{position:fixed;left:0;top:0;bottom:0;z-index:200;transform:translateX(-100%);width:240px!important;box-shadow:var(--sh-lg)}
   .sd-sidebar.mobile-open{transform:translateX(0)}
   .sd-sidebar.collapsed{width:240px!important}
   .sd-sidebar.collapsed .sb-logo,.sd-sidebar.collapsed .sb-user-info,.sd-sidebar.collapsed .sb-xp-bar,.sd-sidebar.collapsed .sb-section-label,.sd-sidebar.collapsed .sb-item-label,.sd-sidebar.collapsed .sb-dark-label,.sd-sidebar.collapsed .sb-room-name,.sd-sidebar.collapsed .sb-room-count,.sd-sidebar.collapsed .sb-stat-lbl{display:revert}
   .sb-collapse-btn{display:none}
-  .sd-sidebar-overlay{display:block!important}
   .sd-topbar{display:flex!important}
 }
 @media(min-width:769px){
@@ -937,6 +937,13 @@ header{display:none!important}
 @media(min-width:769px){.aichat-page{height:100vh}}
 .goals-layout{min-height:calc(100vh - 50px)}
 @media(min-width:769px){.goals-layout{min-height:100vh}}
+@media(max-width:768px){
+  .sd-shell{height:100dvh}
+  .sd-page-area{-webkit-overflow-scrolling:touch}
+  .tracker-page,.pomo-page,.community-page,.missions-page,.planner-page,.report-page,.rewards-page,.shop-page{padding:16px!important}
+  .total-stat-row{grid-template-columns:1fr 1fr!important}
+  .subjects-grid{grid-template-columns:1fr!important}
+}
 </style>
 
 <div class="sd-sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
@@ -4470,11 +4477,11 @@ function toggleSidebar() {
 
 function openMobileSidebar() {
   sdSidebar.classList.add('mobile-open');
-  document.getElementById('sidebarOverlay').style.display = 'block';
+  document.getElementById('sidebarOverlay').classList.add('active');
 }
 function closeMobileSidebar() {
   sdSidebar.classList.remove('mobile-open');
-  document.getElementById('sidebarOverlay').style.display = 'none';
+  document.getElementById('sidebarOverlay').classList.remove('active');
 }
 
 // ── Patch switchTab to update SIDEBAR active state instead of tab-bar ──
