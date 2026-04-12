@@ -1657,13 +1657,12 @@ function getCloudPayload(){
 function applyPayload(d){
   if(!d)return;
   if(d.subjects!==undefined){
-    // Only restore from cloud if localStorage has no subjects saved recently
-    const localSubjectsRaw=localStorage.getItem('sd_subjects');
-    const localAge=Date.now()-parseInt(localStorage.getItem('sd_saved_at')||'0');
-    if(!localSubjectsRaw||localAge>300000){
-      subjects=d.subjects; // >5min old local data, trust cloud
+    // Always trust cloud data since it's the source of truth
+    // Only keep localStorage subjects if they were saved MORE recently than cloud
+    const localSavedAt=parseInt(localStorage.getItem('sd_saved_at')||'0');
+    if((d.savedAt||0)>=localSavedAt){
+      subjects=Array.isArray(d.subjects)?d.subjects:[];
     }
-    // else keep localStorage subjects (user may have just deleted one)
   }
   if(d.pomoSessions!==undefined)pomoSessions=d.pomoSessions;
   if(d.pomoFocusMin!==undefined)pomoFocusMin=d.pomoFocusMin;
@@ -1726,6 +1725,7 @@ function saveLocal(){
   localStorage.setItem('sd_early_bird',earlyBird?'1':'0');
   localStorage.setItem('sd_xp',xp);
   localStorage.setItem('sd_level',level);
+  localStorage.setItem('sd_saved_at',Date.now());
   // ── Firebase (debounced 3s) ──
   scheduleCloudSave();
 }
@@ -1738,14 +1738,13 @@ async function loadProfileFromCloud(uid){
       const localSaved=parseInt(localStorage.getItem('sd_saved_at')||'0');
       if((cloudData.savedAt||0)>=localSaved){
         applyPayload(cloudData);
-        // If localStorage has subjects saved within last 2 minutes, trust them over cloud
-        // (guards against cloud restoring deleted subjects before debounced save fires)
-        const localSubjectsRaw=localStorage.getItem('sd_subjects');
-        const localSubjectsAge=Date.now()-localSaved;
-        if(localSubjectsRaw&&localSubjectsAge<120000){
-          subjects=JSON.parse(localSubjectsRaw);
-        }
         mirrorToLocalStorage();
+        // Re-render subjects now that cloud data is loaded
+        renderSubjects();
+        updatePomoSubjectSelect();
+        updateCoinDisplay();
+        updateXpDisplay();
+        updatePomoStats();
         return true;
       }
     }
@@ -2008,6 +2007,8 @@ window.filterShop=filterShop;window.buyItem=buyItem;window.toggleEquipBadge=togg
 window.openSwitchPanel=openSwitchPanel;window.closeSwitchPanel=closeSwitchPanel;window.switchToRoom=switchToRoom;window.leaveRoom=leaveRoom;window.openAddRoomFromPanel=openAddRoomFromPanel;
 window.removeFromSaved=removeFromSaved;
 window.broadcastStudyStatus=broadcastStudyStatus;window.clearStudyStatus=clearStudyStatus;
+window.toggleSubjectTimer=toggleSubjectTimer;
+window.addSubject=addSubject;window.deleteSubject=deleteSubject;
 
 // ── INIT ──
 async function init(){
@@ -2087,6 +2088,8 @@ async function init(){
   } else {
     showRoomLobby();
   }
+  // Re-render subjects after everything loads (catches any async cloud data)
+  setTimeout(()=>{ renderSubjects(); updatePomoSubjectSelect(); },800);
 }
 function showCloudLoadingBanner(msg){
   let el=document.getElementById('cloudLoadBanner');
@@ -2749,11 +2752,10 @@ let linkedPomoSubjectId=null; // subject linked to pomodoro
 function addSubject(){
   const name=document.getElementById('subjectName').value.trim();
   if(!name){showToast('Enter a subject name!');return;}
-  // Re-sync from localStorage before checking duplicates (guards against stale memory)
-  const localSubjects=JSON.parse(localStorage.getItem('sd_subjects')||'[]');
-  subjects=localSubjects;
-  if(subjects.find(s=>s.name.toLowerCase()===name.toLowerCase())){showToast('Already exists!');return;}
-  subjects.push({id:'s'+Date.now(),name,color:selectedColor,totalMins:0,sessions:[]});
+  // Always use in-memory subjects array (it's kept in sync)
+  if(subjects.find(s=>s.name.toLowerCase()===name.toLowerCase())){showToast('Subject already exists!');return;}
+  const newSubject={id:'s'+Date.now(),name,color:selectedColor,totalMins:0,sessions:[]};
+  subjects.push(newSubject);
   saveLocal();
   // Immediately push to cloud
   if(userId) set(ref(db,`profiles/${userId}`),getCloudPayload()).catch(()=>{});
