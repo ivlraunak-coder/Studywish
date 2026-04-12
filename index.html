@@ -1195,6 +1195,7 @@ header{display:none!important}
           <div class="pomo-time" id="pomoTime">25:00</div>
           <div class="pomo-label" id="pomoLabel">FOCUS</div>
           <div class="pomo-coin-info" id="pomoCoinPreview">🍄 +25 on finish</div>
+        <div id="pomoLinkedSubjectLabel" style="font-size:.72rem;color:rgba(255,255,255,.8);margin-top:4px;font-weight:600"></div>
         </div>
         <div class="pomo-particles"><div class="particle" id="p1"></div><div class="particle" id="p2"></div><div class="particle" id="p3"></div></div>
         <div class="confetti-container" id="confettiContainer"></div>
@@ -2071,7 +2072,10 @@ async function init(){
   const cp=document.getElementById('colorPicker');
   COLORS.forEach(c=>{const d=document.createElement('div');d.className='color-dot'+(c===selectedColor?' selected':'');d.style.background=c;d.onclick=()=>{selectedColor=c;document.querySelectorAll('.color-dot').forEach(x=>x.classList.remove('selected'));d.classList.add('selected');};cp.appendChild(d);});
 
-  checkStreak();updatePomoStats();updatePomoDisplay();renderSubjects();renderBadges();loadPetState();
+  checkStreak();updatePomoStats();updatePomoDisplay();
+  // Restore linked pomo subject
+  linkedPomoSubjectId=localStorage.getItem('sd_linked_pomo_subject')||null;
+  renderSubjects();renderBadges();loadPetState();
   renderMissions();startMissionTimer();
 
   if(!userName){document.getElementById('onboardModal').classList.remove('hidden');return;}
@@ -2692,7 +2696,21 @@ function pomoFinished(){
     awardXP(pomoSettings.focus*5+25,`Pomodoro session complete! 🍅`);
     // Also log focus time to weekly log for missions
     logStudyToWeekly(pomoSettings.focus);
-    showToast('🎉 Focus session done! Take a break.');
+    // ── LOG TIME TO LINKED SUBJECT ──
+    if(linkedPomoSubjectId){
+      const subj=subjects.find(s=>String(s.id)===String(linkedPomoSubjectId));
+      if(subj){
+        subj.totalMins+=pomoSettings.focus;
+        subj.sessions.push({mins:pomoSettings.focus,date:new Date().toLocaleDateString(),time:fmtTime(),source:'🍅 Pomodoro'});
+        if(subj.sessions.length>20)subj.sessions=subj.sessions.slice(-20);
+        saveLocal();renderSubjects();syncUser();
+        showToast(`🎉 Focus done! +${pomoSettings.focus}m logged to ${subj.name}`);
+      } else {
+        showToast('🎉 Focus session done! Take a break.');
+      }
+    } else {
+      showToast('🎉 Focus session done! Link a subject in Tracker to auto-log time.');
+    }
   } else {showToast('Break over! 💪');}
   updatePomoStats();saveLocal();syncUser();
   const mins=pomoMode==='focus'?pomoSettings.focus:pomoMode==='short'?pomoSettings.short:pomoSettings.long;
@@ -2704,6 +2722,12 @@ function updatePomoDisplay(){
   const totalSecs=(pomoMode==='focus'?pomoSettings.focus:pomoMode==='short'?pomoSettings.short:pomoSettings.long)*60;
   document.getElementById('pomoRing').style.strokeDashoffset=POMO_CIRC*(pomoSecondsLeft/totalSecs);
   document.getElementById('pomoLabel').textContent={focus:'FOCUS',short:'SHORT BREAK',long:'LONG BREAK'}[pomoMode];
+  // Show linked subject
+  const lbl=document.getElementById('pomoLinkedSubjectLabel');
+  if(lbl){
+    const subj=linkedPomoSubjectId?subjects.find(s=>String(s.id)===String(linkedPomoSubjectId)):null;
+    lbl.textContent=subj&&pomoMode==='focus'?`📖 Logging to: ${subj.name}`:'';
+  }
 }
 function updatePomoStats(){
   document.getElementById('pomoSessions').textContent=pomoSessions;
@@ -2895,13 +2919,35 @@ setInterval(refreshStudyingNow,1000);
 function updatePomoSubjectSelect(){
   const sel=document.getElementById('pomoSubjectSelect');
   if(!sel)return;
-  const cur=sel.value;
+  // Restore from localStorage if not set in memory
+  if(!linkedPomoSubjectId){
+    const saved=localStorage.getItem('sd_linked_pomo_subject');
+    if(saved&&subjects.find(s=>String(s.id)===String(saved))){
+      linkedPomoSubjectId=saved;
+    }
+  }
   sel.innerHTML='<option value="">— No subject linked —</option>'+subjects.map(s=>`<option value="${String(s.id)}">${esc(s.name)}</option>`).join('');
-  if(cur&&subjects.find(s=>String(s.id)===String(cur)))sel.value=cur;
+  if(linkedPomoSubjectId&&subjects.find(s=>String(s.id)===String(linkedPomoSubjectId))){
+    sel.value=linkedPomoSubjectId;
+  }
+  const subj=subjects.find(s=>String(s.id)===String(linkedPomoSubjectId));
+  const statusEl=document.getElementById('pomoLinkStatus');
+  if(statusEl){
+    statusEl.textContent=subj
+      ?`✅ Pomodoro sessions will auto-log time to "${subj.name}".`
+      :'Select a subject above — when a Pomodoro focus session finishes, it logs time to that subject automatically.';
+    statusEl.style.color=subj?'var(--sage)':'var(--muted)';
+  }
   sel.onchange=()=>{
     linkedPomoSubjectId=sel.value||null;
+    localStorage.setItem('sd_linked_pomo_subject',linkedPomoSubjectId||'');
     const subj=subjects.find(s=>String(s.id)===String(linkedPomoSubjectId));
-    document.getElementById('pomoLinkStatus').textContent=subj?`✅ Pomodoro sessions will log to "${subj.name}" automatically.`:'Select a subject above — when a Pomodoro focus session finishes, it logs time to that subject automatically.';
+    if(statusEl){
+      statusEl.textContent=subj?`✅ Pomodoro sessions will auto-log time to "${subj.name}".`:'Select a subject above — when a Pomodoro focus session finishes, it logs time to that subject automatically.';
+      statusEl.style.color=subj?'var(--sage)':'var(--muted)';
+    }
+    renderSubjects(); // refresh pomo-linked badge on cards
+    showToast(subj?`🍅 Pomodoro linked to ${subj.name}!`:'Pomodoro unlinked.');
   };
 }
 
@@ -2909,22 +2955,26 @@ function renderSubjects(){
   const grid=document.getElementById('subjectsGrid');
   if(!subjects.length){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:.85rem">No subjects yet! Add one above to start tracking 📚</div>`;updateTotalStats();return;}
   const maxMins=Math.max(...subjects.map(s=>s.totalMins),1);
+  // Capture current elapsed before re-render so we can restore it
+  const currentElapsedEl=activeTimerId?document.getElementById('live_'+activeTimerId):null;
+  const currentElapsedVal=currentElapsedEl?currentElapsedEl.textContent:'00:00';
   grid.innerHTML=subjects.map(s=>{
     const sid=String(s.id);
     const pct=(s.totalMins/maxMins*100).toFixed(1);
     const isRunning=String(activeTimerId)===sid;
-    const sessionsHtml=s.sessions.slice().reverse().slice(0,5).map(se=>`<div class="session-entry">${se.date} ${se.time}<span>+${formatMins(se.mins)}</span></div>`).join('');
+    const isLinkedPomo=String(linkedPomoSubjectId)===sid;
+    const sessionsHtml=s.sessions.slice().reverse().slice(0,5).map(se=>`<div class="session-entry">${se.source?`<span style="color:var(--pink);font-size:.65rem">${se.source}</span> `:''}${se.date} ${se.time}<span>+${formatMins(se.mins)}</span></div>`).join('');
     return`<div class="subject-card ${isRunning?'timer-running':''}">
       <div class="subject-top">
         <div class="subject-dot" style="background:${s.color}"></div>
-        <div class="subject-name">${esc(s.name)}</div>
-        <button class="subject-menu" onclick="event.stopPropagation();deleteSubject('${sid}')">✕</button>
+        <div class="subject-name">${esc(s.name)}${isLinkedPomo?'<span style="font-size:.6rem;background:rgba(232,112,138,.15);color:var(--pink);border-radius:4px;padding:1px 5px;margin-left:5px;font-weight:700">🍅 Pomo linked</span>':''}</div>
+        <button class="subject-menu" onclick="event.stopPropagation();deleteSubject('${sid}')" title="Delete subject">🗑</button>
       </div>
       <div class="subject-hrs" style="color:${s.color}">${formatMins(s.totalMins)}</div>
       <div class="subject-hrs-lbl">Total Studied</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0 4px;padding:10px;background:${isRunning?'rgba(232,112,138,.1)':'var(--surface2)'};border-radius:var(--r-sm);border:1.5px solid ${isRunning?'rgba(232,112,138,.3)':'var(--border)'};transition:all .3s">
-        ${isRunning?`<span style="width:8px;height:8px;border-radius:50%;background:var(--pink);display:inline-block;animation:livepulse 1.5s infinite;flex-shrink:0"></span>`:'<span style="font-size:.8rem">⏱</span>'}
-        <span id="live_${sid}" style="font-family:\'JetBrains Mono\',monospace;font-size:1.4rem;font-weight:700;color:${isRunning?'var(--pink)':'var(--muted)'};letter-spacing:1px">${isRunning?'00:00':'00:00'}</span>
+        ${isRunning?`<span style="width:8px;height:8px;border-radius:50%;background:var(--pink);display:inline-block;animation:livepulse 1.5s infinite;flex-shrink:0"></span>`:'<span style="font-size:.8rem;color:var(--muted2)">⏱</span>'}
+        <span id="live_${sid}" style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:${isRunning?'var(--pink)':'var(--muted2)'};letter-spacing:1px">${isRunning?currentElapsedVal:'00:00'}</span>
       </div>
       <div class="subject-bar-bg"><div class="subject-bar-fill" style="width:${pct}%;background:${s.color}"></div></div>
       <button class="subject-timer-btn ${isRunning?'running':''}" onclick="toggleSubjectTimer('${sid}')">${isRunning?'⏹ Stop &amp; Save':'▶ Start Timer'}</button>
