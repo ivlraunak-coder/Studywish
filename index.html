@@ -896,7 +896,7 @@ header{display:none!important}
 .sd-sidebar.collapsed .sb-room-name,.sd-sidebar.collapsed .sb-room-count{display:none}
 .sb-section-label{font-size:.57rem;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;padding:9px 12px 3px;flex-shrink:0}
 .sd-sidebar.collapsed .sb-section-label{display:none}
-.sb-nav{flex:1;overflow-y:auto;padding:3px 7px 7px}
+.sb-nav{flex:1;overflow-y:auto;padding:3px 7px 7px;min-height:0}
 .sb-nav::-webkit-scrollbar{width:3px}
 .sb-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 .sb-item{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:9px;border:none;background:none;width:100%;text-align:left;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:.8rem;font-weight:600;color:var(--text2);transition:all .15s;white-space:nowrap;position:relative}
@@ -909,9 +909,10 @@ header{display:none!important}
 .sd-sidebar.collapsed .sb-badge{position:absolute;top:3px;right:3px;font-size:.5rem;padding:1px 3px}
 .sb-item.ai-item.active{background:linear-gradient(90deg,rgba(197,180,227,.2),rgba(232,112,138,.15));color:var(--rose)}
 .sb-item.ai-item:hover{background:rgba(197,180,227,.12)}
-.sb-bottom{padding:9px 7px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sb-bottom{padding:9px 7px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;background:var(--white)}
 .sb-dark-label{font-size:.73rem;color:var(--muted);font-weight:600;white-space:nowrap}
 .sd-sidebar.collapsed .sb-dark-label{display:none}
+.sd-sidebar.collapsed .sb-bottom{justify-content:center}
 .sd-content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .sd-topbar{height:50px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:9px;flex-shrink:0}
 .sd-topbar-title{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;color:var(--text);flex:1}
@@ -1330,7 +1331,8 @@ header{display:none!important}
     <div class="tracker-title">My Study Tracker</div>
     <div class="tracker-sub">Tap a subject to start/stop a live timer · <span style="color:var(--mushroom);font-weight:700">🍄 Earn 1 coin per minute studied!</span></div>
     <div class="total-stat-row">
-      <div class="total-stat-card"><div class="val" id="totalHrsVal">0m</div><div class="lbl">Total Studied</div></div>
+      <div class="total-stat-card"><div class="val" id="totalHrsVal">0m</div><div class="lbl">All-Time Total</div></div>
+      <div class="total-stat-card"><div class="val" id="pomoTotalTime">0m</div><div class="lbl">🍅 Pomodoro Time</div></div>
       <div class="total-stat-card"><div class="val" id="totalSubjectsVal">0</div><div class="lbl">Subjects</div></div>
       <div class="total-stat-card"><div class="val" id="topSubjectVal">—</div><div class="lbl">Top Subject</div></div>
     </div>
@@ -2909,11 +2911,14 @@ function renderSubjects(){
       <div class="subject-top">
         <div class="subject-dot" style="background:${s.color}"></div>
         <div class="subject-name">${esc(s.name)}</div>
-        ${isRunning?`<div class="subject-live-time"><span style="width:6px;height:6px;border-radius:50%;background:var(--pink);display:inline-block;animation:livepulse 1.5s infinite"></span><span id="live_${sid}">00:00</span></div>`:''}
         <button class="subject-menu" onclick="event.stopPropagation();deleteSubject('${sid}')">✕</button>
       </div>
       <div class="subject-hrs" style="color:${s.color}">${formatMins(s.totalMins)}</div>
       <div class="subject-hrs-lbl">Total Studied</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0 4px;padding:10px;background:${isRunning?'rgba(232,112,138,.1)':'var(--surface2)'};border-radius:var(--r-sm);border:1.5px solid ${isRunning?'rgba(232,112,138,.3)':'var(--border)'};transition:all .3s">
+        ${isRunning?`<span style="width:8px;height:8px;border-radius:50%;background:var(--pink);display:inline-block;animation:livepulse 1.5s infinite;flex-shrink:0"></span>`:'<span style="font-size:.8rem">⏱</span>'}
+        <span id="live_${sid}" style="font-family:\'JetBrains Mono\',monospace;font-size:1.4rem;font-weight:700;color:${isRunning?'var(--pink)':'var(--muted)'};letter-spacing:1px">${isRunning?'00:00':'00:00'}</span>
+      </div>
       <div class="subject-bar-bg"><div class="subject-bar-fill" style="width:${pct}%;background:${s.color}"></div></div>
       <button class="subject-timer-btn ${isRunning?'running':''}" onclick="toggleSubjectTimer('${sid}')">${isRunning?'⏹ Stop &amp; Save':'▶ Start Timer'}</button>
       ${s.sessions.length?`<div class="subject-sessions" style="margin-top:10px">${sessionsHtml}</div>`:''}
@@ -2922,7 +2927,17 @@ function renderSubjects(){
   updateTotalStats();
   updatePomoSubjectSelect();
 }
-function updateTotalStats(){const total=subjects.reduce((a,s)=>a+s.totalMins,0);document.getElementById('totalHrsVal').textContent=formatMins(total)||'0m';document.getElementById('totalSubjectsVal').textContent=subjects.length;const top=subjects.slice().sort((a,b)=>b.totalMins-a.totalMins)[0];document.getElementById('topSubjectVal').textContent=top?top.name:'—';}
+function updateTotalStats(){
+  const trackerTotal=subjects.reduce((a,s)=>a+s.totalMins,0);
+  const total=trackerTotal+pomoFocusMin;
+  document.getElementById('totalHrsVal').textContent=formatMins(total)||'0m';
+  document.getElementById('totalSubjectsVal').textContent=subjects.length;
+  const top=subjects.slice().sort((a,b)=>b.totalMins-a.totalMins)[0];
+  document.getElementById('topSubjectVal').textContent=top?top.name:'—';
+  // Update pomodoro time display if element exists
+  const pomoTotalEl=document.getElementById('pomoTotalTime');
+  if(pomoTotalEl)pomoTotalEl.textContent=formatMins(pomoFocusMin)||'0m';
+}
 
 // ── MISSIONS SYSTEM ──
 const DAILY_MISSIONS=[
