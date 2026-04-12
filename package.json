@@ -1,0 +1,10 @@
+{
+  "name": "studydrop-ai-api",
+  "version": "1.0.0",
+  "description": "StudyDrop AI serverless backend for Vercel",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {}
+}
