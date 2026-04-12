@@ -4581,11 +4581,11 @@ function getUserId() {
   return uid;
 }
 
-async function apiFetch(action, payload, retries = 2) {
+async function apiFetch(action, payload, retries = 0) {
   const url  = `${AI_BACKEND_URL}/api/ai`;
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
-    if (attempt > 0) await new Promise(r => setTimeout(r, 800 * Math.pow(2, attempt - 1)));
+    if (attempt > 0) await new Promise(r => setTimeout(r, 2000 * attempt));
     let resp;
     try {
       resp = await fetch(url, {
@@ -4601,14 +4601,14 @@ async function apiFetch(action, payload, retries = 2) {
     try { data = await resp.json(); } catch { data = {}; }
     if (resp.ok) return data;
     if (resp.status === 429) {
-      const wait = data.retryAfter || 60;
-      if (typeof showToast === 'function') showToast(`⏳ AI rate limit — wait ${wait}s`);
+      const wait = data.retryAfter || 30;
+      if (typeof showToast === 'function') showToast(`⏳ AI rate limit — wait ${wait}s before trying again.`);
       throw new Error('rate_limit');
     }
-    if (resp.status >= 500) { lastErr = new Error(data.message || 'AI service unavailable.'); continue; }
-    throw new Error(data.message || `Request failed (${resp.status})`);
+    if (resp.status >= 500) { lastErr = new Error(data.error || data.message || 'AI service unavailable.'); break; }
+    throw new Error(data.error || data.message || `Request failed (${resp.status})`);
   }
-  throw lastErr || new Error('AI request failed after retries.');
+  throw lastErr || new Error('AI request failed.');
 }
 
 // ── Drop-in replacements for callGemini / callGeminiChat ──
