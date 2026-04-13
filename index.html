@@ -776,7 +776,7 @@ header{background:rgba(255,255,255,.85);backdrop-filter:blur(20px);border-bottom
 </div>
 
 <!-- ONBOARD MODAL -->
-<div class="modal-backdrop" id="onboardModal">
+<div class="modal-backdrop hidden" id="onboardModal">
   <div class="modal">
     <div style="position:absolute;top:18px;right:18px;z-index:10">
       <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode" id="onboardDarkToggle">
@@ -2079,21 +2079,42 @@ async function init(){
   renderSubjects();renderBadges();loadPetState();
   renderMissions();startMissionTimer();
 
-  if(!userName){document.getElementById('onboardModal').classList.remove('hidden');return;}
-  if(currentRoomId){
+  // ── AUTO LOGIN: skip onboard + lobby if already set up ──
+  const savedName = localStorage.getItem('sd_name');
+  const savedRoomId = localStorage.getItem('sd_room_id');
+  const savedRoomName = localStorage.getItem('sd_room_name');
+  const savedRoomsList = JSON.parse(localStorage.getItem('sd_saved_rooms')||'[]');
+
+  if(!savedName){
+    // Brand new user — show onboard
+    document.getElementById('onboardModal').classList.remove('hidden');
+    return;
+  }
+
+  // User has a name — restore it
+  userName = savedName;
+  userPfp = localStorage.getItem('sd_pfp')||'';
+
+  if(savedRoomId){
+    // Has a current room — go straight in
+    currentRoomId = savedRoomId;
+    currentRoomName = savedRoomName||'';
     if(!savedRooms.find(r=>r.id===currentRoomId)){
-      savedRooms.push({id:currentRoomId,name:currentRoomName});saveLocal();
+      savedRooms.push({id:currentRoomId,name:currentRoomName});
+      saveLocal();
     }
     enterApp();
-  } else if(savedRooms.length>0){
-    // Auto-rejoin the last saved room — no need to show lobby
-    const lastRoom=savedRooms[savedRooms.length-1];
-    currentRoomId=lastRoom.id;
-    currentRoomName=lastRoom.name;
-    localStorage.setItem('sd_room_id',currentRoomId);
-    localStorage.setItem('sd_room_name',currentRoomName);
+  } else if(savedRoomsList.length>0){
+    // Has saved rooms but no current — auto-join last one
+    const lastRoom = savedRoomsList[savedRoomsList.length-1];
+    currentRoomId = lastRoom.id;
+    currentRoomName = lastRoom.name;
+    localStorage.setItem('sd_room_id', currentRoomId);
+    localStorage.setItem('sd_room_name', currentRoomName);
+    savedRooms = savedRoomsList;
     enterApp();
   } else {
+    // Has name but no rooms — show lobby to join/create
     showRoomLobby();
   }
   // Re-render subjects after everything loads (catches any async cloud data)
