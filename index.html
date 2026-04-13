@@ -2085,6 +2085,14 @@ async function init(){
       savedRooms.push({id:currentRoomId,name:currentRoomName});saveLocal();
     }
     enterApp();
+  } else if(savedRooms.length>0){
+    // Auto-rejoin the last saved room — no need to show lobby
+    const lastRoom=savedRooms[savedRooms.length-1];
+    currentRoomId=lastRoom.id;
+    currentRoomName=lastRoom.name;
+    localStorage.setItem('sd_room_id',currentRoomId);
+    localStorage.setItem('sd_room_name',currentRoomName);
+    enterApp();
   } else {
     showRoomLobby();
   }
