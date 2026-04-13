@@ -1020,6 +1020,27 @@ header{display:none!important}
     <button class="sb-item ai-item" data-sb="quiz" onclick="switchTab('quiz',this)">
       <span class="sb-item-icon">🧠</span><span class="sb-item-label">AI Quiz</span>
     </button>
+    <div class="sb-section-label" style="margin-top:4px">New ✨</div>
+    <button class="sb-item" data-sb="dailyreward" onclick="switchTab('dailyreward',this)">
+      <span class="sb-item-icon">🎁</span><span class="sb-item-label">Daily Reward</span>
+      <span class="sb-badge" id="dailyRewardBadge" style="display:none">!</span>
+    </button>
+    <button class="sb-item" data-sb="spinwheel" onclick="switchTab('spinwheel',this)">
+      <span class="sb-item-icon">🎰</span><span class="sb-item-label">Spin Wheel</span>
+      <span class="sb-badge" id="spinBadge" style="display:none">!</span>
+    </button>
+    <button class="sb-item" data-sb="notes" onclick="switchTab('notes',this)">
+      <span class="sb-item-icon">📝</span><span class="sb-item-label">Notes</span>
+    </button>
+    <button class="sb-item" data-sb="streakcal" onclick="switchTab('streakcal',this)">
+      <span class="sb-item-icon">🔥</span><span class="sb-item-label">Streak Calendar</span>
+    </button>
+    <button class="sb-item" data-sb="focusmode" onclick="switchTab('focusmode',this)">
+      <span class="sb-item-icon">🎯</span><span class="sb-item-label">Focus Mode</span>
+    </button>
+    <button class="sb-item" data-sb="roomgoals" onclick="switchTab('roomgoals',this)">
+      <span class="sb-item-icon">🚀</span><span class="sb-item-label">Room Goals</span>
+    </button>
     <div class="sb-section-label" style="margin-top:4px">Social</div>
     <button class="sb-item" data-sb="community" onclick="switchTab('community',this)">
       <span class="sb-item-icon">🏆</span><span class="sb-item-label">Leaderboard</span>
@@ -1441,6 +1462,306 @@ header{display:none!important}
       </div>
     </div>
   </div>
+</div>
+
+<!-- ══ DAILY REWARD PAGE ══ -->
+<div class="page" id="page-dailyreward">
+<style>
+.reward-page{padding:28px;max-width:500px;margin:0 auto}
+.reward-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);padding:32px;text-align:center;box-shadow:var(--sh-lg);margin-bottom:20px;position:relative;overflow:hidden}
+.reward-card::before{content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:200px;height:200px;border-radius:50%;background:var(--grad3);opacity:.5;pointer-events:none}
+.reward-streak-num{font-size:4rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.reward-streak-lbl{font-size:.85rem;color:var(--muted);font-weight:600;margin-bottom:24px}
+.reward-claim-btn{background:var(--grad);color:white;border:none;border-radius:100px;padding:16px 40px;font-family:'Plus Jakarta Sans',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 4px 18px rgba(232,112,138,.4);transition:all .2s;width:100%}
+.reward-claim-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(232,112,138,.5)}
+.reward-claim-btn:disabled{background:var(--surface2);color:var(--muted);box-shadow:none;transform:none;cursor:not-allowed}
+.reward-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:24px}
+.reward-day{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:10px 4px;text-align:center;transition:all .3s}
+.reward-day.claimed{background:var(--grad);border-color:transparent}
+.reward-day.claimed .rd-icon{filter:none}
+.reward-day.today{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink3)}
+.rd-day{font-size:.58rem;font-weight:800;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.reward-day.claimed .rd-day{color:rgba(255,255,255,.8)}
+.rd-icon{font-size:1.1rem;filter:grayscale(1);opacity:.5}
+.reward-day.claimed .rd-icon{filter:none;opacity:1}
+.rd-coins{font-size:.6rem;font-weight:800;color:var(--mushroom);margin-top:3px}
+.reward-day.claimed .rd-coins{color:rgba(255,255,255,.9)}
+</style>
+<div class="reward-page">
+  <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;margin-bottom:5px;color:var(--text)">🎁 Daily Reward</div>
+  <div style="color:var(--muted);font-size:.85rem;margin-bottom:24px">Log in every day to earn bonus coins & XP!</div>
+  <div class="reward-card">
+    <div class="reward-streak-num" id="loginStreakNum">0</div>
+    <div class="reward-streak-lbl">Day Login Streak 🔥</div>
+    <div class="reward-grid" id="rewardGrid"></div>
+    <button class="reward-claim-btn" id="claimRewardBtn" onclick="claimDailyReward()">🎁 Claim Today's Reward!</button>
+    <div style="font-size:.75rem;color:var(--muted);margin-top:12px" id="rewardNextInfo"></div>
+  </div>
+  <div style="background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--sh)">
+    <div style="font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Reward Schedule</div>
+    <div style="display:flex;flex-direction:column;gap:8px" id="rewardScheduleList"></div>
+  </div>
+</div>
+</div>
+
+<!-- ══ SPIN WHEEL PAGE ══ -->
+<div class="page" id="page-spinwheel">
+<style>
+.spin-page{padding:28px;max-width:500px;margin:0 auto;text-align:center}
+.wheel-wrap{position:relative;display:inline-block;margin:20px auto}
+.wheel-pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:2rem;z-index:10;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+canvas#spinCanvas{border-radius:50%;box-shadow:var(--sh-lg);cursor:pointer;display:block}
+.spin-btn{background:var(--grad);color:white;border:none;border-radius:100px;padding:16px 48px;font-family:'Plus Jakarta Sans',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 4px 18px rgba(232,112,138,.4);transition:all .2s;margin-top:20px}
+.spin-btn:hover{transform:translateY(-2px)}
+.spin-btn:disabled{background:var(--surface2);color:var(--muted);box-shadow:none;transform:none;cursor:not-allowed}
+.spin-result{background:var(--white);border:2px solid var(--pink);border-radius:var(--r);padding:20px;margin-top:20px;display:none;animation:modalIn .4s cubic-bezier(.34,1.4,.64,1)}
+.spin-result.show{display:block}
+</style>
+<div class="spin-page">
+  <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;margin-bottom:5px;color:var(--text)">🎰 Spin Wheel</div>
+  <div style="color:var(--muted);font-size:.85rem;margin-bottom:8px">Spin once per day for bonus coins!</div>
+  <div style="font-size:.78rem;color:var(--pink);font-weight:700;margin-bottom:20px" id="spinCountdown"></div>
+  <div class="wheel-wrap">
+    <div class="wheel-pointer">▼</div>
+    <canvas id="spinCanvas" width="280" height="280"></canvas>
+  </div>
+  <br>
+  <button class="spin-btn" id="spinBtn" onclick="doSpin()">🎰 Spin!</button>
+  <div class="spin-result" id="spinResult">
+    <div style="font-size:2rem" id="spinResultIcon">🎉</div>
+    <div style="font-size:1.1rem;font-weight:800;color:var(--text);margin-top:8px" id="spinResultText">You won!</div>
+    <div style="font-size:.85rem;color:var(--muted);margin-top:4px" id="spinResultSub"></div>
+  </div>
+</div>
+</div>
+
+<!-- ══ NOTES PAGE ══ -->
+<div class="page" id="page-notes">
+<style>
+.notes-page{display:flex;height:calc(100vh - 50px);overflow:hidden}
+@media(min-width:769px){.notes-page{height:100vh}}
+.notes-sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--border);background:var(--white);display:flex;flex-direction:column;overflow:hidden}
+.notes-list{flex:1;overflow-y:auto;padding:8px}
+.note-item{padding:10px 12px;border-radius:var(--r-xs);cursor:pointer;transition:all .15s;margin-bottom:4px;border:1.5px solid transparent}
+.note-item:hover{background:var(--surface2)}
+.note-item.active{background:var(--pink3);border-color:rgba(232,112,138,.3)}
+.note-item-title{font-weight:700;font-size:.82rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note-item-preview{font-size:.7rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.note-item-date{font-size:.62rem;color:var(--muted2);margin-top:3px}
+.notes-editor{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.note-title-input{width:100%;background:none;border:none;border-bottom:1px solid var(--border);padding:16px 20px;font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--text);outline:none}
+.note-title-input::placeholder{color:var(--muted2)}
+.note-body-input{flex:1;width:100%;background:none;border:none;padding:16px 20px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.92rem;color:var(--text);outline:none;resize:none;line-height:1.8}
+.note-body-input::placeholder{color:var(--muted2)}
+.notes-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--border);background:var(--white);flex-shrink:0}
+@media(max-width:600px){.notes-sidebar{width:160px}}
+</style>
+<div class="notes-page" id="notesPage">
+  <div class="notes-sidebar">
+    <div style="padding:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+      <div style="font-weight:800;font-size:.85rem;color:var(--text);flex:1">📝 Notes</div>
+      <button onclick="createNote()" style="background:var(--grad);border:none;border-radius:8px;color:white;font-size:1rem;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800">+</button>
+    </div>
+    <div style="padding:8px">
+      <input id="notesSearch" placeholder="Search notes..." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:7px 10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.78rem;color:var(--text);outline:none" oninput="filterNotes()">
+    </div>
+    <div class="notes-list" id="notesList"></div>
+  </div>
+  <div class="notes-editor" id="notesEditor">
+    <input class="note-title-input" id="noteTitleInput" placeholder="Note title..." oninput="saveCurrentNote()">
+    <div style="padding:6px 20px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-shrink:0">
+      <select id="noteSubjectTag" onchange="saveCurrentNote()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:5px 8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.75rem;color:var(--text);outline:none">
+        <option value="">No subject</option>
+      </select>
+      <span style="font-size:.7rem;color:var(--muted)" id="noteAutoSave">Auto-saved</span>
+      <button onclick="deleteCurrentNote()" style="margin-left:auto;background:none;border:none;color:var(--muted2);cursor:pointer;font-size:.8rem;padding:4px 8px;border-radius:6px" onmouseover="this.style.color='#dc3545'" onmouseout="this.style.color='var(--muted2)'">🗑 Delete</button>
+    </div>
+    <textarea class="note-body-input" id="noteBodyInput" placeholder="Start writing your notes here... 📝" oninput="saveCurrentNote()"></textarea>
+  </div>
+</div>
+</div>
+
+<!-- ══ STREAK CALENDAR PAGE ══ -->
+<div class="page" id="page-streakcal">
+<style>
+.streak-cal-page{padding:28px;max-width:800px;margin:0 auto}
+.heatmap-wrap{background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);padding:24px;box-shadow:var(--sh);margin-bottom:20px;overflow-x:auto}
+.heatmap-grid{display:flex;gap:3px}
+.heatmap-col{display:flex;flex-direction:column;gap:3px}
+.heatmap-cell{width:14px;height:14px;border-radius:3px;background:var(--surface3);transition:all .2s;cursor:pointer;position:relative;flex-shrink:0}
+.heatmap-cell:hover::after{content:attr(data-tip);position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);font-size:.6rem;font-weight:700;padding:3px 7px;border-radius:5px;white-space:nowrap;pointer-events:none;z-index:10}
+.heatmap-cell[data-level="1"]{background:rgba(232,112,138,.25)}
+.heatmap-cell[data-level="2"]{background:rgba(232,112,138,.5)}
+.heatmap-cell[data-level="3"]{background:rgba(232,112,138,.75)}
+.heatmap-cell[data-level="4"]{background:var(--pink)}
+.heatmap-month-labels{display:flex;gap:3px;margin-bottom:4px;padding-left:20px}
+.heatmap-month-label{font-size:.6rem;font-weight:700;color:var(--muted);min-width:14px}
+.heatmap-day-labels{display:flex;flex-direction:column;gap:3px;margin-right:4px}
+.heatmap-day-label{height:14px;font-size:.58rem;color:var(--muted);font-weight:700;display:flex;align-items:center}
+.streak-stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.streak-stat-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:16px;text-align:center;box-shadow:var(--sh)}
+.streak-stat-val{font-size:1.8rem;font-weight:800;color:var(--pink);letter-spacing:-1px}
+.streak-stat-lbl{font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.cal-legend{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:.7rem;color:var(--muted);font-weight:600}
+.cal-legend-cells{display:flex;gap:3px}
+</style>
+<div class="streak-cal-page">
+  <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;margin-bottom:5px;color:var(--text)">🔥 Streak Calendar</div>
+  <div style="color:var(--muted);font-size:.85rem;margin-bottom:20px">Your study activity over the past year — keep the streak alive!</div>
+  <div class="streak-stats-grid" id="streakStatsGrid"></div>
+  <div class="heatmap-wrap">
+    <div style="font-weight:800;font-size:.9rem;color:var(--text);margin-bottom:14px">Study Activity — Last 12 Months</div>
+    <div style="display:flex">
+      <div class="heatmap-day-labels">
+        <div class="heatmap-day-label" style="margin-top:18px">Mon</div>
+        <div class="heatmap-day-label" style="margin-top:3px"></div>
+        <div class="heatmap-day-label" style="margin-top:3px">Wed</div>
+        <div class="heatmap-day-label" style="margin-top:3px"></div>
+        <div class="heatmap-day-label" style="margin-top:3px">Fri</div>
+        <div class="heatmap-day-label" style="margin-top:3px"></div>
+        <div class="heatmap-day-label" style="margin-top:3px">Sun</div>
+      </div>
+      <div style="flex:1;overflow-x:auto">
+        <div id="heatmapMonthLabels" class="heatmap-month-labels"></div>
+        <div id="heatmapGrid" class="heatmap-grid"></div>
+      </div>
+    </div>
+    <div class="cal-legend">
+      <span>Less</span>
+      <div class="cal-legend-cells">
+        <div class="heatmap-cell" style="position:relative"></div>
+        <div class="heatmap-cell" data-level="1" style="position:relative"></div>
+        <div class="heatmap-cell" data-level="2" style="position:relative"></div>
+        <div class="heatmap-cell" data-level="3" style="position:relative"></div>
+        <div class="heatmap-cell" data-level="4" style="position:relative"></div>
+      </div>
+      <span>More</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ FOCUS MODE PAGE ══ -->
+<div class="page" id="page-focusmode">
+<style>
+.focus-page{padding:28px;max-width:600px;margin:0 auto;text-align:center}
+.focus-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);padding:32px;box-shadow:var(--sh-lg);margin-bottom:20px}
+.focus-time-display{font-family:'JetBrains Mono',monospace;font-size:4rem;font-weight:700;color:var(--text);letter-spacing:2px;margin:20px 0}
+.focus-controls{display:flex;gap:12px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.focus-btn{background:var(--grad);color:white;border:none;border-radius:100px;padding:14px 32px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.95rem;font-weight:800;cursor:pointer;box-shadow:0 4px 18px rgba(232,112,138,.35);transition:all .2s}
+.focus-btn:hover{transform:translateY(-2px)}
+.focus-btn-ghost{background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);border-radius:100px;padding:14px 32px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s}
+.focus-btn-ghost:hover{border-color:var(--pink);color:var(--pink)}
+.ambient-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.ambient-btn{background:var(--white);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:14px 10px;cursor:pointer;transition:all .2s;font-family:'Plus Jakarta Sans',sans-serif}
+.ambient-btn:hover{border-color:var(--pink);background:var(--pink3)}
+.ambient-btn.active{background:var(--pink3);border-color:var(--pink);color:var(--rose)}
+.ambient-btn .amb-icon{font-size:1.8rem;display:block;margin-bottom:6px}
+.ambient-btn .amb-name{font-size:.75rem;font-weight:700;color:var(--text)}
+.focus-fullscreen-btn{background:var(--surface2);border:1.5px solid var(--border);border-radius:100px;padding:8px 18px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.78rem;font-weight:700;color:var(--text2);cursor:pointer;transition:all .2s;margin-top:12px}
+.focus-fullscreen-btn:hover{border-color:var(--pink);color:var(--pink)}
+.focus-fullscreen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;display:none}
+.focus-fullscreen.active{display:flex}
+.focus-task-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:12px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.9rem;color:var(--text);outline:none;transition:border-color .2s;margin-bottom:16px}
+.focus-task-input:focus{border-color:var(--pink)}
+</style>
+<div class="focus-page">
+  <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;margin-bottom:5px;color:var(--text)">🎯 Focus Mode</div>
+  <div style="color:var(--muted);font-size:.85rem;margin-bottom:24px">Deep work session with ambient sounds. No distractions.</div>
+
+  <div class="focus-card">
+    <input class="focus-task-input" id="focusTaskInput" placeholder="What are you focusing on? e.g. Chapter 5 Physics...">
+    <div style="font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Session Duration</div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:20px">
+      <button onclick="setFocusDuration(25,this)" class="planner-mode-btn active" id="focusDur25">25 min</button>
+      <button onclick="setFocusDuration(45,this)" class="planner-mode-btn" id="focusDur45">45 min</button>
+      <button onclick="setFocusDuration(60,this)" class="planner-mode-btn" id="focusDur60">60 min</button>
+      <button onclick="setFocusDuration(90,this)" class="planner-mode-btn" id="focusDur90">90 min</button>
+    </div>
+    <div class="focus-time-display" id="focusTimeDisplay">25:00</div>
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px" id="focusTaskLabel">Set your focus task above</div>
+    <div class="focus-controls">
+      <button class="focus-btn" id="focusStartBtn" onclick="toggleFocusMode()">▶ Start Focus</button>
+      <button class="focus-btn-ghost" onclick="resetFocusMode()">↺ Reset</button>
+    </div>
+    <button class="focus-fullscreen-btn" onclick="enterFocusFullscreen()">⛶ Enter Fullscreen Focus</button>
+  </div>
+
+  <div class="focus-card">
+    <div style="font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">🎵 Ambient Sounds</div>
+    <div class="ambient-grid">
+      <button class="ambient-btn" onclick="toggleAmbient('rain',this)"><span class="amb-icon">🌧️</span><span class="amb-name">Rain</span></button>
+      <button class="ambient-btn" onclick="toggleAmbient('cafe',this)"><span class="amb-icon">☕</span><span class="amb-name">Café</span></button>
+      <button class="ambient-btn" onclick="toggleAmbient('forest',this)"><span class="amb-icon">🌿</span><span class="amb-name">Forest</span></button>
+      <button class="ambient-btn" onclick="toggleAmbient('waves',this)"><span class="amb-icon">🌊</span><span class="amb-name">Waves</span></button>
+      <button class="ambient-btn" onclick="toggleAmbient('fire',this)"><span class="amb-icon">🔥</span><span class="amb-name">Fireplace</span></button>
+      <button class="ambient-btn" onclick="toggleAmbient('white',this)"><span class="amb-icon">🤍</span><span class="amb-name">White Noise</span></button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:.78rem;color:var(--muted);font-weight:600">Volume</span>
+      <input type="range" id="ambientVolume" min="0" max="1" step="0.1" value="0.5" style="flex:1" oninput="setAmbientVolume(this.value)">
+    </div>
+  </div>
+</div>
+
+<!-- Fullscreen focus overlay -->
+<div class="focus-fullscreen" id="focusFullscreen">
+  <div style="font-family:'Playfair Display',serif;font-size:1rem;font-style:italic;color:var(--muted);margin-bottom:8px" id="fsTaskLabel">Focusing...</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:6rem;font-weight:700;color:var(--text);letter-spacing:4px" id="fsTimeDisplay">25:00</div>
+  <div style="display:flex;gap:16px;margin-top:32px">
+    <button onclick="toggleFocusMode()" style="background:var(--grad);color:white;border:none;border-radius:100px;padding:14px 36px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.95rem;font-weight:800;cursor:pointer" id="fsPauseBtn">⏸ Pause</button>
+    <button onclick="exitFocusFullscreen()" style="background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);border-radius:100px;padding:14px 36px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer">✕ Exit</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ ROOM GOALS PAGE ══ -->
+<div class="page" id="page-roomgoals">
+<style>
+.roomgoals-page{padding:28px;max-width:700px;margin:0 auto}
+.rg-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);padding:24px;box-shadow:var(--sh);margin-bottom:16px}
+.rg-goal-item{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:16px;margin-bottom:12px;transition:all .2s}
+.rg-goal-item:hover{border-color:var(--pink2)}
+.rg-goal-title{font-weight:800;font-size:.95rem;color:var(--text);margin-bottom:6px}
+.rg-goal-meta{font-size:.75rem;color:var(--muted);margin-bottom:10px}
+.rg-progress-bg{background:var(--border2);border-radius:100px;height:10px;overflow:hidden;margin-bottom:6px}
+.rg-progress-fill{height:10px;border-radius:100px;background:var(--grad);transition:width .6s cubic-bezier(.34,1.2,.64,1)}
+.rg-progress-fill.done{background:linear-gradient(135deg,var(--sage),#6da861)}
+.rg-progress-text{font-size:.72rem;color:var(--muted);font-weight:700}
+.rg-contributors{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.rg-contributor{display:flex;align-items:center;gap:5px;background:var(--white);border:1px solid var(--border);border-radius:100px;padding:3px 9px;font-size:.7rem;font-weight:700;color:var(--text2)}
+.rg-contribute-btn{background:var(--grad);color:white;border:none;border-radius:100px;padding:7px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:10px}
+.rg-contribute-btn:hover{transform:scale(1.05)}
+.rg-new-form{display:flex;flex-direction:column;gap:10px}
+.rg-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-xs);padding:11px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.88rem;color:var(--text);outline:none;transition:border-color .2s}
+.rg-input:focus{border-color:var(--pink)}
+</style>
+<div class="roomgoals-page">
+  <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;margin-bottom:5px;color:var(--text)">🚀 Room Goals</div>
+  <div style="color:var(--muted);font-size:.85rem;margin-bottom:20px">Set shared goals for your room — study together, achieve together!</div>
+
+  <div class="rg-card">
+    <div style="font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Active Room Goals</div>
+    <div id="roomGoalsList"><div style="text-align:center;padding:30px;color:var(--muted);font-size:.85rem">No room goals yet — create one below! 🚀</div></div>
+  </div>
+
+  <div class="rg-card">
+    <div style="font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">➕ Create New Room Goal</div>
+    <div class="rg-new-form">
+      <input class="rg-input" id="rgTitle" placeholder="Goal title e.g. Study 100 hours this week">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input class="rg-input" id="rgTarget" type="number" placeholder="Target (hours)" min="1" max="1000" style="flex:1;min-width:120px">
+        <select class="rg-input" id="rgType" style="flex:1;min-width:120px">
+          <option value="hours">Hours studied</option>
+          <option value="pomos">Pomodoros</option>
+          <option value="goals">Goals posted</option>
+        </select>
+      </div>
+      <input class="rg-input" id="rgDeadline" type="date">
+      <button class="btn btn-primary" onclick="createRoomGoal()" style="border-radius:var(--r-sm);justify-content:center">🚀 Create Room Goal</button>
+    </div>
+  </div>
+</div>
 </div>
 
 </div><!-- end appWrap -->
@@ -4580,9 +4901,651 @@ window.switchTab = function(id, btn) {
   if (window.innerWidth <= 768) closeMobileSidebar();
 };
 
-// ── Sync sidebar stats whenever XP/coins/streak change ──
-// Hook into existing updateXpBar / updateCoinDisplay globals
-const _origUpdateXp = window.updateXpBar;
+// ══════════════════════════════════════════════
+// 1. DAILY REWARD SYSTEM
+// ══════════════════════════════════════════════
+const DAILY_REWARDS = [
+  {day:1, coins:20,  xp:50,  icon:'🌱', label:'Day 1'},
+  {day:2, coins:30,  xp:75,  icon:'✨', label:'Day 2'},
+  {day:3, coins:50,  xp:100, icon:'🔥', label:'Day 3'},
+  {day:4, coins:40,  xp:80,  icon:'💫', label:'Day 4'},
+  {day:5, coins:60,  xp:120, icon:'⚡', label:'Day 5'},
+  {day:6, coins:80,  xp:150, icon:'🌟', label:'Day 6'},
+  {day:7, coins:150, xp:300, icon:'👑', label:'Day 7 BONUS'},
+];
+let loginStreak=0, lastLoginDate='', claimedToday=false;
+
+function loadRewardState(){
+  loginStreak=parseInt(localStorage.getItem('sd_login_streak')||'0');
+  lastLoginDate=localStorage.getItem('sd_last_login')||'';
+  const today=getTodayKey();
+  claimedToday=localStorage.getItem('sd_claimed_today')===today;
+  // Check streak continuity
+  if(lastLoginDate){
+    const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+    const yKey=yesterday.toISOString().slice(0,10);
+    if(lastLoginDate!==today&&lastLoginDate!==yKey){
+      // Broke streak
+      loginStreak=0;
+      localStorage.setItem('sd_login_streak','0');
+    }
+  }
+}
+
+function renderDailyReward(){
+  loadRewardState();
+  const today=getTodayKey();
+  // Update badge
+  const badge=document.getElementById('dailyRewardBadge');
+  if(badge)badge.style.display=claimedToday?'none':'inline';
+  // Streak number
+  const sn=document.getElementById('loginStreakNum');
+  if(sn)sn.textContent=loginStreak;
+  // Render 7-day grid
+  const grid=document.getElementById('rewardGrid');
+  if(!grid)return;
+  const dayInCycle=((loginStreak)%7)||7;
+  grid.innerHTML=DAILY_REWARDS.map((r,i)=>{
+    const dayNum=i+1;
+    const claimed=claimedToday?dayNum<=dayInCycle:dayNum<dayInCycle;
+    const isToday=claimedToday?dayNum===dayInCycle:dayNum===dayInCycle;
+    return`<div class="reward-day ${claimed?'claimed':''} ${isToday&&!claimed?'today':''}">
+      <div class="rd-day">D${dayNum}</div>
+      <div class="rd-icon">${r.icon}</div>
+      <div class="rd-coins">🍄${r.coins}</div>
+    </div>`;
+  }).join('');
+  // Claim button
+  const btn=document.getElementById('claimRewardBtn');
+  const info=document.getElementById('rewardNextInfo');
+  if(btn){
+    if(claimedToday){
+      btn.disabled=true;
+      btn.textContent='✅ Already claimed today!';
+      if(info)info.textContent='Come back tomorrow for your next reward! 🌅';
+    } else {
+      const r=DAILY_REWARDS[(dayInCycle-1)%7];
+      btn.disabled=false;
+      btn.textContent=`🎁 Claim Day ${dayInCycle}: ${r.icon} +${r.coins} coins & +${r.xp} XP!`;
+      if(info)info.textContent='';
+    }
+  }
+  // Schedule list
+  const sl=document.getElementById('rewardScheduleList');
+  if(sl){
+    sl.innerHTML=DAILY_REWARDS.map(r=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:1.2rem">${r.icon}</span>
+        <div style="flex:1"><div style="font-weight:700;font-size:.82rem;color:var(--text)">${r.label}</div></div>
+        <div style="display:flex;gap:8px">
+          <span style="font-size:.75rem;font-weight:800;color:var(--mushroom)">🍄 +${r.coins}</span>
+          <span style="font-size:.75rem;font-weight:800;color:var(--lavender)">⭐ +${r.xp}</span>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function claimDailyReward(){
+  loadRewardState();
+  if(claimedToday){showToast('Already claimed today!');return;}
+  const today=getTodayKey();
+  const dayInCycle=((loginStreak)%7)||7;
+  const r=DAILY_REWARDS[(dayInCycle-1)%7];
+  loginStreak++;
+  lastLoginDate=today;
+  claimedToday=true;
+  localStorage.setItem('sd_login_streak',loginStreak);
+  localStorage.setItem('sd_last_login',today);
+  localStorage.setItem('sd_claimed_today',today);
+  awardCoins(r.coins,`Day ${loginStreak} login reward! ${r.icon}`);
+  awardXP(r.xp,`Daily login bonus! ${r.icon}`);
+  showToast(`🎁 Day ${loginStreak} reward claimed! +${r.coins} 🍄 +${r.xp} ⭐`);
+  renderDailyReward();
+}
+window.claimDailyReward=claimDailyReward;
+
+// Auto-show daily reward badge on load
+setTimeout(()=>{
+  loadRewardState();
+  const badge=document.getElementById('dailyRewardBadge');
+  if(badge&&!claimedToday)badge.style.display='inline';
+},1000);
+
+// ══════════════════════════════════════════════
+// 2. SPIN WHEEL
+// ══════════════════════════════════════════════
+const SPIN_PRIZES = [
+  {label:'+50 🍄',  coins:50,  xp:0,   color:'#e8708a'},
+  {label:'+10 🍄',  coins:10,  xp:0,   color:'#f2a98a'},
+  {label:'+100 XP', coins:0,   xp:100, color:'#c5b4e3'},
+  {label:'+25 🍄',  coins:25,  xp:0,   color:'#a8c5a0'},
+  {label:'💎 200 🍄',coins:200, xp:0,   color:'#7bb8d4'},
+  {label:'+75 XP',  coins:0,   xp:75,  color:'#f4c88a'},
+  {label:'+15 🍄',  coins:15,  xp:0,   color:'#e89ab4'},
+  {label:'+150 XP', coins:0,   xp:150, color:'#9bc4ae'},
+];
+let spinAngle=0, spinRunning=false;
+
+function drawWheel(){
+  const canvas=document.getElementById('spinCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const cx=140,cy=140,r=130;
+  const arc=2*Math.PI/SPIN_PRIZES.length;
+  ctx.clearRect(0,0,280,280);
+  SPIN_PRIZES.forEach((p,i)=>{
+    const start=spinAngle+i*arc-Math.PI/2;
+    const end=start+arc;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,end);ctx.closePath();
+    ctx.fillStyle=p.color;ctx.fill();
+    ctx.strokeStyle='white';ctx.lineWidth=2;ctx.stroke();
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(start+arc/2);
+    ctx.textAlign='right';ctx.fillStyle='white';ctx.font='bold 11px Plus Jakarta Sans';
+    ctx.fillText(p.label,r-8,4);ctx.restore();
+  });
+  // Center circle
+  ctx.beginPath();ctx.arc(cx,cy,22,0,2*Math.PI);
+  ctx.fillStyle='white';ctx.fill();
+  ctx.strokeStyle='var(--border)';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='var(--text)';ctx.font='bold 13px Plus Jakarta Sans';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('🎰',cx,cy);
+}
+
+function doSpin(){
+  const lastSpin=localStorage.getItem('sd_last_spin');
+  const today=getTodayKey();
+  if(lastSpin===today){showToast('Already spun today! Come back tomorrow 🎰');return;}
+  if(spinRunning)return;
+  spinRunning=true;
+  const btn=document.getElementById('spinBtn');
+  if(btn)btn.disabled=true;
+  const prize=Math.floor(Math.random()*SPIN_PRIZES.length);
+  const arc=2*Math.PI/SPIN_PRIZES.length;
+  const targetAngle=(2*Math.PI*5)+(Math.PI*2-(prize*arc+arc/2));
+  const start=performance.now();
+  const dur=4000;
+  const startAngle=spinAngle;
+  function animate(now){
+    const t=Math.min((now-start)/dur,1);
+    const ease=1-Math.pow(1-t,4);
+    spinAngle=startAngle+targetAngle*ease;
+    drawWheel();
+    if(t<1){requestAnimationFrame(animate);}
+    else{
+      spinRunning=false;
+      localStorage.setItem('sd_last_spin',today);
+      const p=SPIN_PRIZES[prize];
+      if(p.coins>0)awardCoins(p.coins,'Spin Wheel prize! 🎰');
+      if(p.xp>0)awardXP(p.xp,'Spin Wheel prize! 🎰');
+      const res=document.getElementById('spinResult');
+      const icon=document.getElementById('spinResultIcon');
+      const text=document.getElementById('spinResultText');
+      const sub=document.getElementById('spinResultSub');
+      if(res){res.classList.add('show');}
+      if(icon)icon.textContent=p.coins>0?'🍄':'⭐';
+      if(text)text.textContent=`You won ${p.label}!`;
+      if(sub)sub.textContent=p.coins>0?`+${p.coins} Mushroom Coins added!`:`+${p.xp} XP added!`;
+      showToast(`🎰 You won ${p.label}!`);
+      // Update spin badge
+      const badge=document.getElementById('spinBadge');
+      if(badge)badge.style.display='none';
+    }
+  }
+  requestAnimationFrame(animate);
+}
+window.doSpin=doSpin;
+
+function initSpinWheel(){
+  drawWheel();
+  const lastSpin=localStorage.getItem('sd_last_spin');
+  const today=getTodayKey();
+  const btn=document.getElementById('spinBtn');
+  const cd=document.getElementById('spinCountdown');
+  if(lastSpin===today){
+    if(btn){btn.disabled=true;btn.textContent='Come back tomorrow! 🎰';}
+    if(cd)cd.textContent='✅ Already spun today';
+  } else {
+    if(btn){btn.disabled=false;btn.textContent='🎰 Spin!';}
+    const badge=document.getElementById('spinBadge');
+    if(badge)badge.style.display='inline';
+    if(cd)cd.textContent='🎰 Free spin available!';
+  }
+}
+
+// ══════════════════════════════════════════════
+// 3. NOTES SYSTEM
+// ══════════════════════════════════════════════
+let notes=[], currentNoteId=null;
+
+function loadNotes(){
+  notes=JSON.parse(localStorage.getItem('sd_notes')||'[]');
+}
+function saveNotes(){
+  localStorage.setItem('sd_notes',JSON.stringify(notes));
+}
+function createNote(){
+  loadNotes();
+  const note={id:'n'+Date.now(),title:'Untitled Note',body:'',subject:'',createdAt:Date.now(),updatedAt:Date.now()};
+  notes.unshift(note);
+  saveNotes();
+  renderNotesList();
+  openNote(note.id);
+  document.getElementById('noteTitleInput').focus();
+}
+function openNote(id){
+  loadNotes();
+  currentNoteId=id;
+  const note=notes.find(n=>n.id===id);
+  if(!note)return;
+  document.getElementById('noteTitleInput').value=note.title;
+  document.getElementById('noteBodyInput').value=note.body;
+  const sel=document.getElementById('noteSubjectTag');
+  if(sel)sel.value=note.subject||'';
+  renderNotesList();
+}
+function saveCurrentNote(){
+  if(!currentNoteId)return;
+  loadNotes();
+  const note=notes.find(n=>n.id===currentNoteId);
+  if(!note)return;
+  note.title=document.getElementById('noteTitleInput').value||'Untitled Note';
+  note.body=document.getElementById('noteBodyInput').value;
+  note.subject=document.getElementById('noteSubjectTag').value||'';
+  note.updatedAt=Date.now();
+  // Move to top
+  notes=notes.filter(n=>n.id!==currentNoteId);
+  notes.unshift(note);
+  saveNotes();
+  renderNotesList();
+  const as=document.getElementById('noteAutoSave');
+  if(as){as.textContent='Saved ✓';as.style.color='var(--sage)';setTimeout(()=>{as.textContent='Auto-saved';as.style.color='';},1500);}
+}
+function deleteCurrentNote(){
+  if(!currentNoteId)return;
+  if(!confirm('Delete this note?'))return;
+  notes=notes.filter(n=>n.id!==currentNoteId);
+  saveNotes();
+  currentNoteId=null;
+  document.getElementById('noteTitleInput').value='';
+  document.getElementById('noteBodyInput').value='';
+  renderNotesList();
+  showToast('Note deleted 🗑');
+}
+function filterNotes(){
+  const q=document.getElementById('notesSearch').value.toLowerCase();
+  renderNotesList(q);
+}
+function renderNotesList(filter=''){
+  loadNotes();
+  const list=document.getElementById('notesList');
+  if(!list)return;
+  // Update subject dropdown
+  const sel=document.getElementById('noteSubjectTag');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">No subject</option>'+subjects.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+    sel.value=cur;
+  }
+  const filtered=filter?notes.filter(n=>n.title.toLowerCase().includes(filter)||n.body.toLowerCase().includes(filter)):notes;
+  if(!filtered.length){
+    list.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:.78rem">${filter?'No notes found':'No notes yet — click + to create one!'}</div>`;
+    return;
+  }
+  list.innerHTML=filtered.map(n=>{
+    const subj=subjects.find(s=>s.id===n.subject);
+    const preview=n.body.slice(0,60).replace(/\n/g,' ')||'Empty note';
+    const date=new Date(n.updatedAt).toLocaleDateString([],{month:'short',day:'numeric'});
+    return`<div class="note-item ${n.id===currentNoteId?'active':''}" onclick="openNote('${n.id}')">
+      <div class="note-item-title">${esc(n.title)}</div>
+      ${subj?`<div style="font-size:.6rem;color:${subj.color};font-weight:700;margin-top:2px">● ${esc(subj.name)}</div>`:''}
+      <div class="note-item-preview">${esc(preview)}</div>
+      <div class="note-item-date">${date}</div>
+    </div>`;
+  }).join('');
+}
+window.createNote=createNote;window.openNote=openNote;
+window.saveCurrentNote=saveCurrentNote;window.deleteCurrentNote=deleteCurrentNote;
+window.filterNotes=filterNotes;
+
+// ══════════════════════════════════════════════
+// 4. STREAK CALENDAR (HEATMAP)
+// ══════════════════════════════════════════════
+function renderStreakCalendar(){
+  // Build 52 weeks of data
+  const today=new Date();
+  const weeks=[];
+  const startDate=new Date(today);
+  startDate.setDate(startDate.getDate()-363);
+  // Align to Monday
+  const dow=startDate.getDay();
+  startDate.setDate(startDate.getDate()-(dow===0?6:dow-1));
+  let cur=new Date(startDate);
+  let currentWeek=[];
+  const monthLabels=[];
+  let lastMonth=-1;
+  while(cur<=today){
+    const k=cur.toISOString().slice(0,10);
+    const mins=weeklyStudyLog[k]||0;
+    let level=0;
+    if(mins>=120)level=4;
+    else if(mins>=60)level=3;
+    else if(mins>=30)level=2;
+    else if(mins>0)level=1;
+    const isToday=cur.toDateString()===today.toDateString();
+    currentWeek.push({k,mins,level,isToday,date:new Date(cur)});
+    if(currentWeek.length===7){
+      if(cur.getMonth()!==lastMonth){
+        monthLabels.push({weekIdx:weeks.length,month:cur.toLocaleDateString([],{month:'short'})});
+        lastMonth=cur.getMonth();
+      }
+      weeks.push([...currentWeek]);
+      currentWeek=[];
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+  if(currentWeek.length){weeks.push([...currentWeek]);}
+  // Render grid
+  const grid=document.getElementById('heatmapGrid');
+  if(!grid)return;
+  grid.innerHTML=weeks.map(week=>`
+    <div class="heatmap-col">${week.map(d=>`
+      <div class="heatmap-cell" data-level="${d.level}" data-tip="${d.k}: ${d.mins?formatMins(d.mins):'No study'}" style="${d.isToday?'outline:2px solid var(--pink);outline-offset:1px':''}"></div>
+    `).join('')}</div>
+  `).join('');
+  // Month labels
+  const ml=document.getElementById('heatmapMonthLabels');
+  if(ml){
+    const arr=new Array(weeks.length).fill('');
+    monthLabels.forEach(m=>{if(m.weekIdx<arr.length)arr[m.weekIdx]=m.month;});
+    ml.innerHTML=arr.map(m=>`<div class="heatmap-month-label">${m}</div>`).join('');
+  }
+  // Stats
+  const allMins=Object.values(weeklyStudyLog).reduce((a,b)=>a+b,0);
+  const studiedDays=Object.values(weeklyStudyLog).filter(m=>m>0).length;
+  const longestStreak=calcLongestStreak();
+  const grid2=document.getElementById('streakStatsGrid');
+  if(grid2){
+    grid2.innerHTML=`
+      <div class="streak-stat-card"><div class="streak-stat-val">${formatMins(allMins)}</div><div class="streak-stat-lbl">Total Studied</div></div>
+      <div class="streak-stat-card"><div class="streak-stat-val">${studiedDays}</div><div class="streak-stat-lbl">Days Active</div></div>
+      <div class="streak-stat-card"><div class="streak-stat-val">🔥${pomoStreak}</div><div class="streak-stat-lbl">Current Streak</div></div>
+      <div class="streak-stat-card"><div class="streak-stat-val">⚡${longestStreak}</div><div class="streak-stat-lbl">Longest Streak</div></div>
+    `;
+  }
+}
+
+function calcLongestStreak(){
+  const keys=Object.keys(weeklyStudyLog).filter(k=>weeklyStudyLog[k]>0).sort();
+  let max=0,cur2=0,prev=null;
+  keys.forEach(k=>{
+    if(prev){
+      const d=new Date(k),p=new Date(prev);
+      d.setDate(d.getDate()-1);
+      if(d.toISOString().slice(0,10)===prev){cur2++;}
+      else{cur2=1;}
+    } else {cur2=1;}
+    if(cur2>max)max=cur2;
+    prev=k;
+  });
+  return max;
+}
+
+// ══════════════════════════════════════════════
+// 5. FOCUS MODE
+// ══════════════════════════════════════════════
+let focusDuration=25*60, focusRemaining=25*60, focusRunning=false, focusInterval=null;
+let ambientCtx=null, currentAmbient=null;
+
+function setFocusDuration(mins, btn){
+  if(focusRunning){showToast('Stop timer first!');return;}
+  focusDuration=mins*60;focusRemaining=mins*60;
+  document.querySelectorAll('[id^=focusDur]').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  updateFocusDisplay();
+}
+function updateFocusDisplay(){
+  const m=Math.floor(focusRemaining/60),s=focusRemaining%60;
+  const str=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const d=document.getElementById('focusTimeDisplay');
+  const fs=document.getElementById('fsTimeDisplay');
+  if(d)d.textContent=str;
+  if(fs)fs.textContent=str;
+}
+function toggleFocusMode(){
+  if(focusRunning){
+    focusRunning=false;clearInterval(focusInterval);
+    const btn=document.getElementById('focusStartBtn');
+    const fsBtn=document.getElementById('fsPauseBtn');
+    if(btn)btn.textContent='▶ Resume Focus';
+    if(fsBtn)fsBtn.textContent='▶ Resume';
+  } else {
+    focusRunning=true;
+    const task=document.getElementById('focusTaskInput').value||'Focusing...';
+    const lbl=document.getElementById('focusTaskLabel');
+    const fsLbl=document.getElementById('fsTaskLabel');
+    if(lbl)lbl.textContent=`📖 ${task}`;
+    if(fsLbl)fsLbl.textContent=task;
+    const btn=document.getElementById('focusStartBtn');
+    const fsBtn=document.getElementById('fsPauseBtn');
+    if(btn)btn.textContent='⏸ Pause';
+    if(fsBtn)fsBtn.textContent='⏸ Pause';
+    focusInterval=setInterval(()=>{
+      if(focusRemaining<=0){
+        clearInterval(focusInterval);focusRunning=false;
+        const minsStudied=Math.floor(focusDuration/60);
+        awardCoins(minsStudied,`Focus session complete! 🎯`);
+        awardXP(minsStudied*5+25,`Focus session complete! 🎯`);
+        logStudyToWeekly(minsStudied);
+        showToast(`🎯 Focus session done! +${minsStudied} min logged!`);
+        const btn2=document.getElementById('focusStartBtn');
+        if(btn2)btn2.textContent='▶ Start Focus';
+        exitFocusFullscreen();
+        return;
+      }
+      focusRemaining--;
+      updateFocusDisplay();
+    },1000);
+  }
+}
+function resetFocusMode(){
+  focusRunning=false;clearInterval(focusInterval);
+  focusRemaining=focusDuration;
+  updateFocusDisplay();
+  const btn=document.getElementById('focusStartBtn');
+  if(btn)btn.textContent='▶ Start Focus';
+}
+function enterFocusFullscreen(){
+  const fs=document.getElementById('focusFullscreen');
+  if(fs){fs.classList.add('active');}
+  if(!focusRunning)toggleFocusMode();
+}
+function exitFocusFullscreen(){
+  const fs=document.getElementById('focusFullscreen');
+  if(fs)fs.classList.remove('active');
+}
+
+const AMBIENT_URLS={
+  rain:'https://www.soundjay.com/nature/rain-01.mp3',
+  cafe:'https://www.soundjay.com/misc/sounds/coffee-shop-ambience-1.mp3',
+  forest:'https://www.soundjay.com/nature/sounds/forest-ambience-1.mp3',
+  waves:'https://www.soundjay.com/nature/waves-1.mp3',
+  fire:'https://www.soundjay.com/nature/fire-burning-4.mp3',
+  white:'https://www.soundjay.com/misc/sounds/white-noise-1.mp3',
+};
+let ambientAudio=null;
+function toggleAmbient(type, btn){
+  document.querySelectorAll('.ambient-btn').forEach(b=>b.classList.remove('active'));
+  if(currentAmbient===type){
+    if(ambientAudio){ambientAudio.pause();ambientAudio=null;}
+    currentAmbient=null;
+    showToast('Ambient sound off');
+    return;
+  }
+  currentAmbient=type;
+  btn.classList.add('active');
+  if(ambientAudio)ambientAudio.pause();
+  // Use Web Audio API to generate ambient sounds (no external URLs needed)
+  generateAmbientSound(type);
+  showToast(`🎵 ${type.charAt(0).toUpperCase()+type.slice(1)} sounds on`);
+}
+function generateAmbientSound(type){
+  try{
+    if(!ambientCtx)ambientCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(ambientCtx.state==='suspended')ambientCtx.resume();
+    // Stop previous
+    if(ambientAudio&&ambientAudio.stop){try{ambientAudio.stop();}catch(e){}}
+    const vol=parseFloat(document.getElementById('ambientVolume').value||0.5);
+    const gainNode=ambientCtx.createGain();
+    gainNode.gain.value=vol;
+    gainNode.connect(ambientCtx.destination);
+    ambientAudio={gainNode, stop:()=>gainNode.disconnect()};
+    // Generate noise
+    const bufferSize=2*ambientCtx.sampleRate;
+    const buffer=ambientCtx.createBuffer(1,bufferSize,ambientCtx.sampleRate);
+    const data=buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++){data[i]=(Math.random()*2-1);}
+    const src=ambientCtx.createBufferSource();
+    src.buffer=buffer;src.loop=true;
+    const filter=ambientCtx.createBiquadFilter();
+    if(type==='rain'){filter.type='bandpass';filter.frequency.value=400;}
+    else if(type==='fire'){filter.type='lowpass';filter.frequency.value=300;}
+    else if(type==='white'){filter.type='allpass';}
+    else{filter.type='lowpass';filter.frequency.value=800;}
+    src.connect(filter);filter.connect(gainNode);
+    src.start();
+    ambientAudio.stop=()=>{try{src.stop();}catch(e){}gainNode.disconnect();};
+  }catch(e){showToast('Audio not supported in this browser');}
+}
+function setAmbientVolume(vol){
+  if(ambientAudio&&ambientAudio.gainNode){
+    ambientAudio.gainNode.gain.value=parseFloat(vol);
+  }
+}
+
+window.setFocusDuration=setFocusDuration;
+window.toggleFocusMode=toggleFocusMode;
+window.resetFocusMode=resetFocusMode;
+window.enterFocusFullscreen=enterFocusFullscreen;
+window.exitFocusFullscreen=exitFocusFullscreen;
+window.toggleAmbient=toggleAmbient;
+window.setAmbientVolume=setAmbientVolume;
+
+// ══════════════════════════════════════════════
+// 6. ROOM GOALS
+// ══════════════════════════════════════════════
+function createRoomGoal(){
+  const title=document.getElementById('rgTitle').value.trim();
+  const target=parseFloat(document.getElementById('rgTarget').value);
+  const type=document.getElementById('rgType').value;
+  const deadline=document.getElementById('rgDeadline').value;
+  if(!title){showToast('Enter a goal title!');return;}
+  if(!target||target<=0){showToast('Enter a valid target!');return;}
+  if(!deadline){showToast('Pick a deadline!');return;}
+  if(!currentRoomId){showToast('Join a room first!');return;}
+  const goalData={
+    title, target, type, deadline,
+    createdBy:userName, createdAt:Date.now(),
+    contributions:{},
+    uid:userId
+  };
+  push(ref(db,`rooms/${currentRoomId}/roomgoals`), goalData);
+  document.getElementById('rgTitle').value='';
+  document.getElementById('rgTarget').value='';
+  document.getElementById('rgDeadline').value='';
+  showToast('Room goal created! 🚀');
+}
+
+function subscribeRoomGoals(){
+  if(!currentRoomId)return;
+  onValue(ref(db,`rooms/${currentRoomId}/roomgoals`),snap=>{
+    const data=snap.val()||{};
+    renderRoomGoals(data);
+  });
+}
+
+function renderRoomGoals(data){
+  const list=document.getElementById('roomGoalsList');
+  if(!list)return;
+  const entries=Object.entries(data);
+  if(!entries.length){
+    list.innerHTML=`<div style="text-align:center;padding:30px;color:var(--muted);font-size:.85rem">No room goals yet — create one below! 🚀</div>`;
+    return;
+  }
+  list.innerHTML=entries.map(([key,g])=>{
+    const contribs=g.contributions?Object.values(g.contributions):[];
+    const total=contribs.reduce((a,c)=>a+(c.amount||0),0);
+    const pct=Math.min(100,(total/g.target)*100);
+    const done=pct>=100;
+    const typeLabel={hours:'hours studied',pomos:'pomodoros',goals:'goals posted'}[g.type]||g.type;
+    const deadline=new Date(g.deadline).toLocaleDateString([],{month:'short',day:'numeric'});
+    const contribsHtml=contribs.slice(-5).map(c=>`
+      <div class="rg-contributor">${avatarEl(c.name,c.pfp,16)} ${esc(c.name)} +${c.amount}</div>
+    `).join('');
+    const myContrib=contribs.filter(c=>c.uid===userId).reduce((a,c)=>a+c.amount,0);
+    return`<div class="rg-goal-item">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div class="rg-goal-title">${done?'✅ ':''} ${esc(g.title)}</div>
+          <div class="rg-goal-meta">By ${esc(g.createdBy)} · Due ${deadline} · Target: ${g.target} ${typeLabel}</div>
+        </div>
+        ${g.uid===userId?`<button onclick="deleteRoomGoal('${key}')" style="background:none;border:none;color:var(--muted2);cursor:pointer;font-size:.8rem">✕</button>`:''}
+      </div>
+      <div class="rg-progress-bg"><div class="rg-progress-fill ${done?'done':''}" style="width:${pct}%"></div></div>
+      <div class="rg-progress-text">${total.toFixed(1)} / ${g.target} ${typeLabel} (${pct.toFixed(0)}%)</div>
+      ${contribsHtml?`<div class="rg-contributors">${contribsHtml}</div>`:''}
+      ${!done?`<button class="rg-contribute-btn" onclick="contributeToGoal('${key}','${g.type}')">+ Add My Progress</button>`:'<div style="color:var(--sage);font-weight:700;font-size:.82rem;margin-top:8px">🎉 Goal achieved!</div>'}
+      ${myContrib>0?`<div style="font-size:.7rem;color:var(--muted);margin-top:4px">Your contribution: ${myContrib} ${typeLabel}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function contributeToGoal(key, type){
+  const typeLabel={hours:'hours',pomos:'pomodoros',goals:'goals'}[type]||type;
+  const val=prompt(`How many ${typeLabel} to add?`);
+  const amount=parseFloat(val);
+  if(!val||isNaN(amount)||amount<=0){showToast('Invalid amount!');return;}
+  push(ref(db,`rooms/${currentRoomId}/roomgoals/${key}/contributions`),{
+    name:userName, pfp:userPfp, uid:userId, amount, addedAt:Date.now()
+  });
+  showToast(`+${amount} ${typeLabel} added to room goal! 🚀`);
+}
+
+function deleteRoomGoal(key){
+  if(!confirm('Delete this room goal?'))return;
+  remove(ref(db,`rooms/${currentRoomId}/roomgoals/${key}`));
+  showToast('Room goal deleted.');
+}
+
+window.createRoomGoal=createRoomGoal;
+window.contributeToGoal=contributeToGoal;
+window.deleteRoomGoal=deleteRoomGoal;
+
+// ── Hook into switchTab to init pages on first visit ──
+const _origSwitch2=window.switchTab;
+window.switchTab=function(id,btn){
+  if(_origSwitch2)_origSwitch2(id,btn);
+  if(id==='dailyreward')renderDailyReward();
+  if(id==='spinwheel')initSpinWheel();
+  if(id==='notes')renderNotesList();
+  if(id==='streakcal')renderStreakCalendar();
+  if(id==='roomgoals')subscribeRoomGoals();
+};
+
+// ── Subscribe room goals when entering app ──
+const _origEnterApp=window.enterApp;
+window.enterApp=function(){
+  if(_origEnterApp)_origEnterApp();
+  setTimeout(()=>{
+    subscribeRoomGoals();
+    // Check daily reward badge
+    loadRewardState();
+    const badge=document.getElementById('dailyRewardBadge');
+    if(badge&&!claimedToday)badge.style.display='inline';
+    const spinBadge=document.getElementById('spinBadge');
+    if(spinBadge&&localStorage.getItem('sd_last_spin')!==getTodayKey())spinBadge.style.display='inline';
+  },500);
+};
 // ── Sync sidebar stats ──
 // Now handled by updateSidebar() called from updateHeader()
 // Also call once after init to populate initial values
