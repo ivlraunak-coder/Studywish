@@ -776,7 +776,7 @@ header{background:rgba(255,255,255,.85);backdrop-filter:blur(20px);border-bottom
 </div>
 
 <!-- ONBOARD MODAL -->
-<div class="modal-backdrop hidden" id="onboardModal">
+<div class="modal-backdrop" id="onboardModal">
   <div class="modal">
     <div style="position:absolute;top:18px;right:18px;z-index:10">
       <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode" id="onboardDarkToggle">
@@ -1990,6 +1990,7 @@ function updateEquippedDisplay(){
 }
 
 // EXPOSE GLOBALS
+window.init=init;
 window.createRoom=createRoom;window.joinRoom=joinRoom;window.showRoomCode=showRoomCode;
 window.postGoal=postGoal;window.deleteGoal=deleteGoal;window.react=react;
 window.sendChat=sendChat;window.chatEnter=chatEnter;window.deleteChatMsg=deleteChatMsg;
@@ -2086,10 +2087,12 @@ async function init(){
   const savedRoomsList = JSON.parse(localStorage.getItem('sd_saved_rooms')||'[]');
 
   if(!savedName){
-    // Brand new user — show onboard
-    document.getElementById('onboardModal').classList.remove('hidden');
+    // Brand new user — onboard modal is already visible (no hidden class by default)
     return;
   }
+
+  // Returning user — hide the onboard modal immediately
+  document.getElementById('onboardModal').classList.add('hidden');
 
   // User has a name — restore it
   userName = savedName;
@@ -4668,6 +4671,32 @@ window.saveApiKey       = saveApiKey;
 window.saveApiKeyDirect = saveApiKeyDirect;
 window.callGemini       = callGemini;
 window.callGeminiChat   = callGeminiChat;
+</script>
+
+<script>
+// ── BOOTSTRAP: call init() once the ES module has registered window.init ──
+var _initCalled = false;
+var _initAttempts = 0;
+function _tryInit() {
+  if (_initCalled) return;
+  if (typeof window.init === 'function') {
+    _initCalled = true;
+    window.init();
+  } else if (_initAttempts < 100) {
+    _initAttempts++;
+    setTimeout(_tryInit, 50);
+  }
+}
+// Try on DOMContentLoaded, on load, and via polling
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _tryInit);
+} else {
+  _tryInit();
+}
+window.addEventListener('load', _tryInit);
+setTimeout(_tryInit, 100);
+setTimeout(_tryInit, 300);
+setTimeout(_tryInit, 600);
 </script>
 
 </body>
